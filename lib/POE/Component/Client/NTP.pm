@@ -183,8 +183,9 @@ sub _socket {
     $client_frac_localtime );
 
   unless ( send( $socket, $ntp_msg, 0, $server_address ) == length($ntp_msg) ) {
-     carp "$!\n";
-     return;
+    $self->{error} = $!;
+    $kernel->yield('_dispatch');
+    return;
   }
 
   return;
@@ -198,7 +199,8 @@ sub _get_datagram {
   $kernel->select_read( $socket );
   my $remote_address = recv( $socket, my $data = '', 960, 0 );
   unless ( defined $remote_address ) {
-    carp "$!\n";
+    $self->{error} = $!;
+    $kernel->yield('_dispatch');
     return;
   }
   my %tmp_pkt;
@@ -229,12 +231,15 @@ sub _get_datagram {
      (($tmp_pkt{trans_time} += $bin2frac->($tmp_pkt{trans_time_fb})) -= NTP_ADJ)
   );
 
-  $kernel->yield( '_dispatch', \%packet );
+  $self->{response} = \%packet;
+  $kernel->yield('_dispatch');
   return;
 }
 
 sub _dispatch {
-  my ($kernel,$self,$data) = @_[KERNEL,OBJECT,ARG0];
+  my ($kernel,$self) = @_[KERNEL,OBJECT];
+  my $data = { };
+  $data->{$_} = $self->{$_} for grep { defined $self->{$_} } qw(response error context);
   $kernel->post( $self->{sender_id}, $self->{event}, $data );
   $kernel->refcount_decrement( $self->{sender_id}, __PACKAGE__ );
   return;
