@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 20;
 use POE qw(Component::Client::NTP);
 
 my @fields = (
@@ -32,6 +32,7 @@ sub _start {
   POE::Component::Client::NTP->get_ntp_response(
      host => 'pool.ntp.org',
      event => '_response',
+     context => 'word',
   );
   return;
 }
@@ -47,5 +48,9 @@ sub _response {
   ok( $packet->{response}, 'There is a response' );
   is( ref $packet->{response}, 'HASH', 'And the response is a HASHREF' );
   ok( defined $packet->{response}->{ $_ }, $_ ) for @fields;
+  ok( $packet->{host}, 'There is a host' );
+  is( $packet->{host}, 'pool.ntp.org', 'and it is the right thing' );
+  ok( $packet->{context}, 'There is context' );
+  is( $packet->{context}, 'word', 'and it is the right thing' );
   return;
 }
