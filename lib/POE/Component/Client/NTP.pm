@@ -1,14 +1,13 @@
 package POE::Component::Client::NTP;
 
+#ABSTRACT: A POE Component to query NTP servers
+
 use strict;
 use warnings;
 use Carp;
 use IO::Socket::INET;
 use Socket;
 use POE;
-use vars qw($VERSION);
-
-$VERSION = '0.02';
 
 our %MODE = (
       '0'    =>    'reserved',
@@ -64,7 +63,7 @@ our %LEAP_INDICATOR = (
 
     use constant NTP_ADJ => 2208988800;
 
-    my @ntp_packet_fields = 
+    my @ntp_packet_fields =
     (
         'Leap Indicator',
         'Version Number',
@@ -113,7 +112,7 @@ our %LEAP_INDICATOR = (
         my $stratum = shift;
         my $tmp_ip = shift;
         if($stratum < 2){
-            $ip = unpack("A4", 
+            $ip = unpack("A4",
                 pack("H8", $tmp_ip)
             );
         }else{
@@ -222,7 +221,7 @@ sub _get_datagram {
   push @ntp_fields, qw/trans_time trans_time_fb/;
 
   @tmp_pkt{@ntp_fields} =
-      unpack( "a C3   n B16 n B16 H8   N B32 N B32   N B32 N B32", $data ); 
+      unpack( "a C3   n B16 n B16 H8   N B32 N B32   N B32 N B32", $data );
 
   @packet{@ntp_packet_fields} = (
         (unpack( "C", $tmp_pkt{byte1} & "\xC0" ) >> 6),
@@ -257,11 +256,8 @@ sub _dispatch {
 }
 
 'What is the time, Mr Wolf?';
-__END__
 
-=head1 NAME
-
-POE::Component::Client::NTP - A POE Component to query NTP servers
+=pod
 
 =head1 SYNOPSIS
 
@@ -269,18 +265,18 @@ POE::Component::Client::NTP - A POE Component to query NTP servers
   use warnings;
   use POE qw(Component::Client::NTP);
   use Data::Dumper;
-  
+
   my $host = shift or die "Please specify a host name to query\n";
-  
+
   POE::Session->create(
     package_states => [
-  	main => [qw(_start _response)],
+	    main => [qw(_start _response)],
     ],
   );
-  
+
   $poe_kernel->run();
   exit 0;
-  
+
   sub _start {
     POE::Component::Client::NTP->get_ntp_response(
        host => $host,
@@ -288,7 +284,7 @@ POE::Component::Client::NTP - A POE Component to query NTP servers
     );
     return;
   }
-  
+
   sub _response {
     my $packet = $_[ARG0];
     print Dumper( $packet );
@@ -297,17 +293,17 @@ POE::Component::Client::NTP - A POE Component to query NTP servers
 
 =head1 DESCRIPTION
 
-POE::Component::Client::NTP is a L<POE> component that provides Network Time Protocol (NTP) client 
+POE::Component::Client::NTP is a L<POE> component that provides Network Time Protocol (NTP) client
 services to other POE sessions and components.
 
-NTP is a protocol for synchronising the clocks of computer systems over data networks and is described in 
+NTP is a protocol for synchronising the clocks of computer systems over data networks and is described in
 RFC 1305 and RFC 2030.
 
 The code in this module is derided from L<Net::NTP> by James G. Willmore
 
 =head1 CONSTRUCTOR
 
-=over 
+=over
 
 =item C<get_ntp_response>
 
@@ -318,8 +314,8 @@ Takes a number of options, only those marked as C<mandatory> are required:
   'host', the name/address of the NTP server to query, default is 'localhost';
   'port', the UDP port to send the query to, default is 123;
   'timeout', the number of seconds to wait for a response, default is 60 seconds;
-  
-The C<session> parameter is only required if you wish the output event to go to a different session than the calling session, 
+
+The C<session> parameter is only required if you wish the output event to go to a different session than the calling session,
 or if you have spawned the poco outside of a session.
 
 =back
@@ -349,18 +345,6 @@ An example:
           'Reference Clock Identifier' => '193.79.237.14',
           'Mode' => 4,
           'Root Dispersion' => '0.0000'
-
-=head1 AUTHOR
-
-Chris C<BinGOs> Williams <chris@bingosnet.co.uk>
-
-Derived from Net::NTP by James G. Willmore
-
-=head1 LICENSE
-
-Copyright E<copy> Chris Williams and James G. Willmore.
-
-This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 SEE ALSO
 
