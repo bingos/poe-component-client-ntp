@@ -299,7 +299,7 @@ services to other POE sessions and components.
 NTP is a protocol for synchronising the clocks of computer systems over data networks and is described in
 RFC 1305 and RFC 2030.
 
-The code in this module is derided from L<Net::NTP> by James G. Willmore
+The code in this module is derived from L<Net::NTP> by James G. Willmore
 
 =head1 CONSTRUCTOR
 
