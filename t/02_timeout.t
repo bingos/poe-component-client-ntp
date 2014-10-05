@@ -14,7 +14,7 @@ exit 0;
 
 sub _start {
   POE::Component::Client::NTP->get_ntp_response(
-     host => 'gumbynet.org.uk',
+     host => 'bingosnet.uk',
      event => '_response',
      timeout => 5,
   );
@@ -29,6 +29,6 @@ sub _stop {
 
 sub _response {
   my $packet = $_[ARG0];
-  ok( $packet->{error}, 'There is an error' );
+  ok( $packet->{error}, 'There is an error: "' . $packet->{error} . '"');
   return;
 }

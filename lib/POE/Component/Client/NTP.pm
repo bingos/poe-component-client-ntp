@@ -5,8 +5,8 @@ package POE::Component::Client::NTP;
 use strict;
 use warnings;
 use Carp;
-use IO::Socket::INET;
-use Socket;
+use Socket qw[:all];
+use IO::Socket::IP;
 use POE;
 
 our %MODE = (
@@ -172,9 +172,18 @@ sub _start {
 
 sub _socket {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-  my $socket = IO::Socket::INET->new( Proto => 'udp' );
-  $kernel->select_read( $socket, '_get_datagram' );
-  my $server_address = pack_sockaddr_in( $self->{port}, inet_aton($self->{host}) );
+  my $socket = IO::Socket::IP->new( Proto => 'udp' );
+  my $ai;
+  {
+    my %hints = (socktype => SOCK_DGRAM, protocol => IPPROTO_UDP);
+    my ($err, @res) = getaddrinfo($self->{host}, $self->{port}, \%hints);
+    if ( $err ) {
+      $self->{error} = $err;
+      $kernel->yield('_dispatch');
+      return;
+    }
+    $ai = shift @res;
+  }
   my $client_localtime      = time();
   my $client_adj_localtime  = $client_localtime + NTP_ADJ;
   my $client_frac_localtime = $frac2bin->($client_adj_localtime);
@@ -183,12 +192,13 @@ sub _socket {
     pack( "B8 C3 N10 B32", '00011011', (0) x 12, int($client_localtime),
     $client_frac_localtime );
 
-  unless ( send( $socket, $ntp_msg, 0, $server_address ) == length($ntp_msg) ) {
+  $socket->socket( $ai->{family}, $ai->{socktype}, $ai->{protocol} );
+  unless ( send( $socket, $ntp_msg, 0, $ai->{addr} ) == length($ntp_msg) ) {
     $self->{error} = $!;
     $kernel->yield('_dispatch');
     return;
   }
-
+  $kernel->select_read( $socket, '_get_datagram' );
   $kernel->delay( '_timeout', ( $self->{timeout} || 60 ), $socket );
   return;
 }
