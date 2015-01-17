@@ -8,6 +8,7 @@ use Carp;
 use Socket qw[:all];
 use IO::Socket::IP;
 use POE;
+use Time::HiRes qw[time];
 
 our %MODE = (
       '0'    =>    'reserved',
@@ -184,7 +185,7 @@ sub _socket {
     }
     $ai = shift @res;
   }
-  my $client_localtime      = time();
+  my $client_localtime      = $self->{client_localtime} = time();
   my $client_adj_localtime  = $client_localtime + NTP_ADJ;
   my $client_frac_localtime = $frac2bin->($client_adj_localtime);
 
@@ -221,6 +222,8 @@ sub _get_datagram {
     $kernel->yield('_dispatch');
     return;
   }
+  my $client_localtime = $self->{client_localtime};
+  my $client_recvtime = time;
   my %tmp_pkt;
   my %packet;
   my @ntp_fields = qw/byte1 stratum poll precision/;
@@ -248,6 +251,18 @@ sub _get_datagram {
       (($tmp_pkt{recv_time} += $bin2frac->($tmp_pkt{recv_time_fb})) -= NTP_ADJ),
      (($tmp_pkt{trans_time} += $bin2frac->($tmp_pkt{trans_time_fb})) -= NTP_ADJ)
   );
+
+  my $dest_org   = sprintf "%0.5f", (($client_recvtime - $client_localtime));
+  my $recv_trans = sprintf "%0.5f", ($packet{'Receive Timestamp'} - $packet{'Transmit Timestamp'});
+  my $delay      = sprintf "%0.5f", ($dest_org + $recv_trans);
+
+  my $recv_org   = $packet{'Receive Timestamp'} - $client_recvtime;
+  my $trans_dest = $packet{'Transmit Timestamp'} - $client_localtime;
+  my $offset     = ($recv_org + $trans_dest) / 2;
+
+  # Calculated offset / delay
+  $packet{Offset} = $offset;
+  $packet{Delay}  = $delay;
 
   $self->{response} = \%packet;
   $kernel->yield('_dispatch');

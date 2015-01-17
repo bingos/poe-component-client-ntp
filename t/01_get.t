@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 20;
+use Test::More tests => 22;
 use POE qw(Component::Client::NTP);
 
 my @fields = (
@@ -16,7 +16,9 @@ my @fields = (
  'Poll Interval',
  'Reference Clock Identifier',
  'Mode',
- 'Root Dispersion'
+ 'Root Dispersion',
+ 'Receive Timestamp',
+ 'Transmit Timestamp',
 );
 
 POE::Session->create(
@@ -46,6 +48,9 @@ sub _stop {
 sub _response {
   my $packet = $_[ARG0];
   ok( $packet->{response}, 'There is a response' );
+  use Data::Dumper;
+  local $Data::Dumper::Indent=1;
+  diag( Dumper( $packet->{response} ) );
   is( ref $packet->{response}, 'HASH', 'And the response is a HASHREF' );
   ok( defined $packet->{response}->{ $_ }, $_ ) for @fields;
   ok( $packet->{host}, 'There is a host' );
